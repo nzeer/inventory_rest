@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 import csv
 
-HOSTS_CSV = "./csv/pop_hosts.csv"
+HOSTS_CSV = "./csv/hosts.csv"
 DICT_HOSTS = {}
 
 with open(HOSTS_CSV, newline="") as csvfile:
@@ -21,21 +21,13 @@ def home():
 
 @app.route('/api/v1/get-inventory-host/<host>', methods=['GET'])
 def get_inventory_host(host):
+    req_host = request.args.get('listing')
+    if req_host:
+        if req_host == "all":
+            return jsonify(DICT_HOSTS), 200     
     if host in DICT_HOSTS:
         return jsonify(DICT_HOSTS[host]), 200
-    '''host = {"host": "uhhy-whatever-1",
-            "ip":   "10.1.1.244",
-            "os":   "Ubuntu",
-            "version": "20"
-            }
-    req_id = request.args.get('vscodeBrowserReqId')
-    if req_id:
-        host['vscodeBrowserReqId'] = req_id
-    #return "get_inventory"
-    #data = request.get_json()
-    return jsonify(host), 200'''
-
-
+ 
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)
