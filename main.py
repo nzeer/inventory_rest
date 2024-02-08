@@ -1,15 +1,10 @@
 from flask import Flask, request, jsonify
+from libdata import *
+
 import csv
 
 HOSTS_CSV = "./csv/hosts.csv"
 DICT_HOSTS = {}
-
-with open(HOSTS_CSV, newline="") as csvfile:
-    spamreader = csv.reader(csvfile, delimiter=";", quotechar="|")
-    for row in spamreader:
-        host_name, list_ip, list_os_info = eval(", ".join(row))
-        DICT_HOSTS[host_name] = {"ip": list_ip, "os": list_os_info} 
-        #print(", ".join(row))
 
 app = Flask(__name__)
 
@@ -30,4 +25,5 @@ def get_inventory_host(host):
  
 
 if __name__ == "__main__":
+    DICT_HOSTS = load_hosts_csv(HOSTS_CSV)
     app.run(host='0.0.0.0', port=5000, debug=True)
