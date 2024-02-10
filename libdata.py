@@ -31,18 +31,34 @@ of DataLoader and calling the appropriate methods. Note that for MySQL and Mongo
 you need to provide a configuration dictionary when creating the DataLoader instance. 
 This dictionary should contain the necessary information for connecting to the 
 database (like host, user, password, etc.). 
+
+config = {
+    'host': '172.16.30.30',
+    'port': 3306,
+    'user': 'root',
+    'password': 'p@s5w0rd',
+    'db': 'testing'
+}
 """
 
 
 @dataclass
 class DataLoader:
-    """
-    A class that provides methods to load and write data from/to different sources.
-    """
+    def __init__(self, *, mysql_config: dict = {}, csv_path: str = {}):
+        if mysql_config:
+            self.mysql_config = mysql_config
+        
+        if csv_path:
+            self.csv_path = csv_path
+            
+    def __call__(self, base):
+        return self
+        
+    def __getattr__(self, name: str) -> Any:
+        return self.__dict__[f"_{name}"]
 
-    csv_path: str = None
-    mysql_config: dict = None
-    mongodb_config: dict = None
+    def __setattr__(self, name, value):
+        self.__dict__[f"_{name}"] = dict(value)
 
     def read_csv(self) -> pd.DataFrame:
         """
@@ -51,16 +67,79 @@ class DataLoader:
         Returns:
             pd.DataFrame: The data read from the CSV file.
         """
-        return pd.read_csv(self.csv_path)
+        data = None
+        try:
+            data = pd.read_csv(self.csv_path)
+        except Exception as e:
+            raise e
+        
+        return data
 
-    def write_csv(self, data: pd.DataFrame):
+    def write_csv(self, data: pd.DataFrame) -> bool:
         """
         Writes the given data to a CSV file.
 
         Args:
             data (pd.DataFrame): The data to be written to the CSV file.
         """
-        data.to_csv(self.csv_path, index=False)
+        state = False
+        try:
+            data.to_csv(self.csv_path, index=False)
+            state = True
+        except Exception as e:
+            raise e
+        finally:
+            return state
+    
+    def csv_to_mysql(self, table_name: str) -> bool:
+        """
+        Reads data from a CSV file and writes it to a MySQL database table.
+
+        Args:
+            table_name (str): The name of the table in the MySQL database.
+        """
+        data = None
+        state = False
+        try:
+            data = self.read_csv()
+            self.write_mysql(data, table_name)
+            state = True
+        except Exception as e:
+            raise e
+        finally:
+            return state
+        
+    def mysql_to_csv(self) -> bool:
+        """
+        Reads data from a MySQL database and writes it to a CSV file.
+        """
+        state = False
+        query = "SELECT * FROM table_name"
+        data = None
+        try:
+            data = self.read_mysql(query)
+            self.write_csv(data)
+            state = True
+        except Exception as e:
+            raise e
+        finally:
+            return state
+        
+    def print_csv_columns(self):
+        """
+        Prints the list of columns in the CSV file.
+        """
+        # Read the CSV file into a pandas DataFrame
+        data = None
+        if self.csv_path is None:
+            raise ValueError("CSV configuration is missing")
+        try:
+            data = pd.read_csv(self.csv_path)
+            # Print the list of columns
+            for column in data.columns:
+                print(column)
+        except Exception as e:
+            raise e
 
     def read_mysql(self, query: str) -> pd.DataFrame:
         """
@@ -72,10 +151,15 @@ class DataLoader:
         Returns:
             pd.DataFrame: The result of the SQL query as a pandas DataFrame.
         """
-        conn = pymysql.connect(**self.mysql_config)
-        return pd.read_sql(query, conn)
+        data = None
+        try:
+            with pymysql.connect(**self.mysql_config) as conn:
+                data = pd.read_sql(query, conn)
+        except Exception as e:
+            raise e
+        return data
 
-    def write_mysql(self, data: pd.DataFrame, table_name: str):
+    def write_mysql(self, data: pd.DataFrame, table_name: str) -> bool:
         """
         Writes the given data to a MySQL database table.
 
@@ -83,197 +167,289 @@ class DataLoader:
             data (pd.DataFrame): The data to be written to the MySQL database.
             table_name (str): The name of the table in the MySQL database.
         """
-        conn = pymysql.connect(**self.mysql_config)
-        data.to_sql(table_name, conn, if_exists='replace')
+        state = False
+        try:
+            with pymysql.connect(**self.mysql_config) as conn:
+                data.to_sql(table_name, conn, if_exists='replace')
+            state = True
+        except Exception as e:
+            raise e
+        finally:
+            return state
 
-    def read_mongodb(self, collection_name: str) -> pd.DataFrame:
+    def create_mysql_table(self, table_name: str, fields: dict) -> bool:
         """
-        Reads data from a MongoDB collection and returns it as a pandas DataFrame.
+        Creates a MySQL database table with the given table name and fields.
 
         Args:
-            collection_name (str): The name of the collection in the MongoDB database.
+            table_name (str): The name of the table in the MySQL database.
+            fields (dict): The fields of the table with their data types.
+        """
+        state = False
+        # Connect to the MySQL server
+        if self.mysql_config is None:
+            raise ValueError("MySQL configuration is missing")
+        try:
+            with pymysql.connect(**self.mysql_config) as conn:
+                cursor = conn.cursor()
+            
+                # Generate the SQL for creating the table
+                fields_sql = ", ".join(f"{name} {type}" for name, type in fields.items())
+                create_table_sql = f"CREATE TABLE {table_name} ({fields_sql})"
+
+                cursor.execute(create_table_sql)
+            state = True
+        except Exception as e:
+            raise e
+        finally:
+            return state
+        
+    def create_mysql_database(self, database_name: str) -> bool:
+        """
+        Creates a MySQL database with the given name.
+
+        Args:
+            database_name (str): The name of the MySQL database to be created.
+        """
+        state = False
+        # Connect to the MySQL server
+        if self.mysql_config is None:
+            raise ValueError("MySQL configuration is missing")
+        try:
+            with pymysql.connect(**self.mysql_config) as conn:
+                cursor = conn.cursor()
+
+                # Generate the SQL for creating the database
+                create_database_sql = f"CREATE DATABASE {database_name}"
+
+                cursor.execute(create_database_sql)
+            state = True
+        except Exception as e:
+            raise e
+        finally:
+            return state
+            
+    def drop_mysql_table(self, table_name: str) -> bool:
+        """
+        Drops a MySQL database table with the given name.
+
+        Args:
+            table_name (str): The name of the table to be dropped.
+        """
+        state = False
+        # Connect to the MySQL server
+        if self.mysql_config is None:
+            raise ValueError("MySQL configuration is missing")
+        try:
+            with pymysql.connect(**self.mysql_config) as conn:
+                cursor = conn.cursor()
+
+                # Generate the SQL for dropping the table
+                drop_table_sql = f"DROP TABLE {table_name}"
+
+                # Execute the SQL
+                cursor.execute(drop_table_sql)
+            state = True
+        except Exception as e:
+            raise e
+        finally:
+            return state
+        
+    def drop_mysql_database(self, database_name: str) -> bool:
+        """
+        Drops a MySQL database with the given name.
+
+        Args:
+            database_name (str): The name of the database to be dropped.
+        """
+        state = False
+        # Connect to the MySQL server
+        if self.mysql_config is None:
+            raise ValueError("MySQL configuration is missing")
+        try:
+            with pymysql.connect(**self.mysql_config) as conn:
+                cursor = conn.cursor()
+
+                # Generate the SQL for dropping the database
+                drop_database_sql = f"DROP DATABASE {database_name}"
+
+                # Execute the SQL
+                cursor.execute(drop_database_sql)
+            state = True
+        except Exception as e:
+            raise e
+        finally:
+            return state
+        
+    def show_mysql_tables(self):
+        """
+        Prints the list of tables in the MySQL database.
+        """
+        # Connect to the MySQL server
+        if self.mysql_config is None:
+            raise ValueError("MySQL configuration is missing")
+        try:
+            with pymysql.connect(**self.mysql_config) as conn:
+                cursor = conn.cursor()
+
+                # Get the list of tables in the database
+                cursor.execute("SHOW TABLES")
+                # Print the list of tables
+                for table in cursor.fetchall():
+                    print(table[0])
+        except Exception as e:
+            raise e
+            
+    def print_mysql_columns(self, table_name: str):
+        """
+        Prints the list of columns in the MySQL database table.
+
+        Args:
+            table_name (str): The name of the table in the MySQL database.
+        """
+        # Connect to the MySQL server
+        if self.mysql_config is None:
+            raise ValueError("MySQL configuration is missing")
+        try:
+            with pymysql.connect(**self.mysql_config) as conn:
+                cursor = conn.cursor()
+        
+            
+                # Get the list of columns in the table
+                cursor.execute(f"DESCRIBE {table_name}")
+                columns = [column[0] for column in cursor.fetchall()]
+            
+                # Print the list of columns
+                for column in columns:
+                    print(column)
+
+                # Get the list of columns in the table
+                cursor.execute(f"SHOW COLUMNS FROM {table_name}")
+
+                # Print the list of columns
+                for column in cursor.fetchall():
+                    print(column[0])
+        except Exception as e:
+            raise e
+
+    def generate_mysql_insert_query(table_name: str, data: dict):
+        """
+        Generate the SQL query for inserting data into a MySQL table.
+
+        Args:
+            table_name (str): The name of the table.
+            data (dict): A dictionary containing the column names as keys and the corresponding values.
 
         Returns:
-            pd.DataFrame: The data read from the MongoDB collection.
+            str: The SQL query for inserting the data into the table.
         """
-        client = MongoClient(**self.mongodb_config)
-        db = client.get_database()
-        collection = db[collection_name]
-        return pd.DataFrame(list(collection.find()))
-
-    def write_mongodb(self, data: pd.DataFrame, collection_name: str):
-        """
-        Writes the given data to a MongoDB collection.
-
-        Args:
-            data (pd.DataFrame): The data to be written to the MongoDB collection.
-            collection_name (str): The name of the collection in the MongoDB database.
-        """
-        client = MongoClient(**self.mongodb_config)
-        db = client.get_database()
-        collection = db[collection_name]
-        data_dict = data.to_dict("records")
-        collection.insert_many(data_dict)
-        
-    def csv_to_mysql(self, table_name: str):
-        """
-        Reads data from a CSV file and writes it to a MySQL database table.
-
-        Args:
-            table_name (str): The name of the table in the MySQL database.
-        """
-        data = self.read_csv()
-        self.write_mysql(data, table_name)
-
-    def mysql_to_csv(self):
-        """
-        Reads data from a MySQL database and writes it to a CSV file.
-        """
-        query = "SELECT * FROM table_name"
-        data = self.read_mysql(query)
-        self.write_csv(data)
+        columns = ", ".join(data.keys())
+        values = ", ".join(f"'{value}'" for value in data.values())
+        insert_query = f"INSERT INTO {table_name} ({columns}) VALUES ({values})"
+        return insert_query
     
-    def csv_to_mongodb(self, collection_name: str):
+    def generate_mysql_update_query(table_name: str, data: dict, condition: str):
         """
-        Reads data from a CSV file and writes it to a MongoDB collection.
+        Generate the SQL query for updating data in a MySQL table.
 
         Args:
-            collection_name (str): The name of the collection in the MongoDB database.
+            table_name (str): The name of the table to update.
+            data (dict): A dictionary containing the column-value pairs to update.
+            condition (str): The condition to specify which rows to update.
+
+        Returns:
+            str: The generated SQL update query.
         """
-        data = self.read_csv()
-        self.write_mongodb(data, collection_name)
-        
-    def mongodb_to_mysql(self, table_name: str):
+        set_clause = ", ".join(f"{column} = '{value}'" for column, value in data.items())
+        update_query = f"UPDATE {table_name} SET {set_clause} WHERE {condition}"
+        return update_query
+    
+    def generate_mysql_delete_query(table_name: str, condition: str):
         """
-        Reads data from a MongoDB collection and writes it to a MySQL database table.
+        Generate the SQL query for deleting data from a MySQL table.
 
         Args:
-            table_name (str): The name of the table in the MySQL database.
+            table_name (str): The name of the table from which data will be deleted.
+            condition (str): The condition that specifies which rows to delete.
+
+        Returns:
+            str: The SQL query for deleting data from the table.
         """
-        data = self.read_mongodb(collection_name)
-        self.write_mysql(data, table_name)
-        
-    def mysql_to_mongodb(self, collection_name: str):
+        delete_query = f"DELETE FROM {table_name} WHERE {condition}"
+        return delete_query
+    
+    def generate_mysql_select_query(table_name: str, columns: list, condition: str = None):
         """
-        Reads data from a MySQL database and writes it to a MongoDB collection.
+        Generate a MySQL SELECT query.
 
         Args:
-            collection_name (str): The name of the collection in the MongoDB database.
+            table_name (str): The name of the table to select from.
+            columns (list): A list of column names to select.
+            condition (str, optional): The condition to apply in the WHERE clause. Defaults to None.
+
+        Returns:
+            str: The generated SELECT query.
         """
-        query = "SELECT * FROM table_name"
-        data = self.read_mysql(query)
-        self.write_mongodb(data, collection_name)
-        
-    def create_mysql_table(mysql_config: dict, table_name: str, fields: dict):
-        # Connect to the MySQL server
-        conn = pymysql.connect(**mysql_config)
-        cursor = conn.cursor()
+        columns_str = ", ".join(columns)
+        select_query = f"SELECT {columns_str} FROM {table_name}"
+        if condition:
+            select_query += f" WHERE {condition}"
+        return select_query
+    
+    def execute_mysql_query(self, query: str) -> bool:
+            """
+            Executes a MySQL query.
 
-        # Generate the SQL for creating the table
-        fields_sql = ", ".join(f"{name} {type}" for name, type in fields.items())
-        create_table_sql = f"CREATE TABLE {table_name} ({fields_sql})"
+            Args:
+                query (str): The SQL query to be executed.
 
-        # Execute the SQL
-        cursor.execute(create_table_sql)
+            Raises:
+                ValueError: If MySQL configuration is missing.
 
-        # Close the connection
-        conn.close()
-        
-    """mysql_config = {'host':'localhost', 'user':'username', 'password':'password', 'db':'database_name'}
-fields = {'id': 'INT PRIMARY KEY', 'name': 'VARCHAR(100)', 'age': 'INT'}
-create_mysql_table(mysql_config, 'table_name', fields)"""
+            Returns:
+                None
+            """
+            state = False
+            # Connect to the MySQL server
+            if self.mysql_config is None:
+                raise ValueError("MySQL configuration is missing")
+            try:
+                with pymysql.connect(**self.mysql_config) as conn:
+                    cursor = conn.cursor()
 
-    def create_mysql_database(mysql_config: dict, database_name: str):
-        # Connect to the MySQL server
-        conn = pymysql.connect(**mysql_config)
-        cursor = conn.cursor()
+                    # Execute the SQL query
+                    cursor.execute(query)
 
-        # Generate the SQL for creating the database
-        create_database_sql = f"CREATE DATABASE {database_name}"
-
-        # Execute the SQL
-        cursor.execute(create_database_sql)
-
-        # Close the connection
-        conn.close()
-        
-    def drop_mysql_table(mysql_config: dict, table_name: str):
-        # Connect to the MySQL server
-        conn = pymysql.connect(**mysql_config)
-        cursor = conn.cursor()
-
-        # Generate the SQL for dropping the table
-        drop_table_sql = f"DROP TABLE {table_name}"
-
-        # Execute the SQL
-        cursor.execute(drop_table_sql)
-
-        # Close the connection
-        conn.close()
-        
-    def drop_mysql_database(mysql_config: dict, database_name: str):
-        # Connect to the MySQL server
-        conn = pymysql.connect(**mysql_config)
-        cursor = conn.cursor()
-
-        # Generate the SQL for dropping the database
-        drop_database_sql = f"DROP DATABASE {database_name}"
-
-        # Execute the SQL
-        cursor.execute(drop_database_sql)
-
-        # Close the connection
-        conn.close()
-        
-    def print_mysql_tables(mysql_config: dict):
-        # Connect to the MySQL server
-        conn = pymysql.connect(**mysql_config)
-        cursor = conn.cursor()
-
-        # Get the list of tables in the database
-        cursor.execute("SHOW TABLES")
-
-        # Print the list of tables
-        for table in cursor.fetchall():
-            print(table[0])
-
-        # Close the connection
-        conn.close()
-        
-    def print_mongodb_collections(mongodb_config: dict):
-        # Connect to the MongoDB server
-        client = MongoClient(**mongodb_config)
-        db = client.get_database()
-
-        # Get the list of collections in the database
-        collections = db.list_collection_names()
-
-        # Print the list of collections
-        for collection in collections:
-            print(collection)
+                    # Commit the changes
+                    conn.commit()
+                return True
+                state = True
+            except Exception as e:
+                raise e
+            #finally:
+             #   return state
             
-        # Close the connection
-        client.close()
-        
-    def print_csv_columns(csv_path: str):
-        # Read the CSV file into a pandas DataFrame
-        data = pd.read_csv(csv_path)
+    def execute_mysql_insert_query(self, mysql_config: dict, table_name: str, data: dict) -> bool:
+        """
+        Executes a MySQL insert query to insert data into a specified table.
 
-        # Print the list of columns
-        for column in data.columns:
-            print(column)
-            
-    def print_mysql_columns(mysql_config: dict, table_name: str):
-        # Connect to the MySQL server
-        conn = pymysql.connect(**mysql_config)
-        cursor = conn.cursor()
+        Args:
+            mysql_config (dict): A dictionary containing MySQL configuration parameters.
+            table_name (str): The name of the table to insert the data into.
+            data (dict): A dictionary containing the data to be inserted.
 
-        # Get the list of columns in the table
-        cursor.execute(f"SHOW COLUMNS FROM {table_name}")
+        Returns:
+            None
+        """
+        state = False
+        # Generate the SQL for inserting the data into the table
+        insert_query = self.generate_mysql_insert_query(table_name, data)
 
-        # Print the list of columns
-        for column in cursor.fetchall():
-            print(column[0])
-
-        # Close the connection
-        conn.close()
+        # Execute the SQL query
+        try:
+            if self.execute_mysql_query(mysql_config, insert_query):
+                state = True
+        except Exception as e:
+            raise e
+        finally:
+            return state
