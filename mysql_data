@@ -1,0 +1,55 @@
+CREATE DATABASE `inventory` /*!40100 COLLATE 'utf8mb4_0900_ai_ci' */
+
+CREATE TABLE `facts` (
+	`id` INT(10) NOT NULL AUTO_INCREMENT,
+	`host_id` INT(10) NOT NULL,
+	`ip_address_id` INT(10) NULL DEFAULT NULL,
+	`distro_info_id` INT(10) NOT NULL,
+	PRIMARY KEY (`id`) USING BTREE,
+	INDEX `FK__hosts` (`host_id`) USING BTREE,
+	INDEX `hosts` (`id`) USING BTREE,
+	INDEX `FK_distros` (`distro_info_id`) USING BTREE,
+	INDEX `FK_ip_address_id` (`ip_address_id`) USING BTREE,
+	CONSTRAINT `FK__hosts` FOREIGN KEY (`host_id`) REFERENCES `hosts` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION,
+	CONSTRAINT `FK_facts_distros` FOREIGN KEY (`distro_info_id`) REFERENCES `distros` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION,
+	CONSTRAINT `FK_ipaddresses` FOREIGN KEY (`ip_address_id`) REFERENCES `ip_addresses` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION
+)
+COLLATE='utf8mb4_0900_ai_ci'
+ENGINE=InnoDB
+;
+
+CREATE TABLE `hosts` (
+	`id` INT(10) NOT NULL AUTO_INCREMENT,
+	`host_name` TEXT NOT NULL COLLATE 'utf8mb4_0900_ai_ci',
+	PRIMARY KEY (`id`) USING BTREE,
+	INDEX `Index 1` (`id`, `host_name`(100)) USING BTREE
+)
+COLLATE='utf8mb4_0900_ai_ci'
+ENGINE=InnoDB
+;
+
+CREATE TABLE `ip_addresses` (
+	`id` INT(10) NOT NULL AUTO_INCREMENT,
+	`host_id` INT(10) NULL DEFAULT NULL,
+	`ipv4` TEXT NOT NULL COLLATE 'utf8mb4_0900_ai_ci',
+	`ipv6` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_0900_ai_ci',
+	`mac` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_0900_ai_ci',
+	PRIMARY KEY (`id`) USING BTREE,
+	INDEX `id` (`id`) USING BTREE,
+	INDEX `host_id` (`host_id`) USING BTREE
+)
+COLLATE='utf8mb4_0900_ai_ci'
+ENGINE=InnoDB
+;
+
+CREATE TABLE `distros` (
+	`id` INT(10) NOT NULL AUTO_INCREMENT,
+	`distro_info` TEXT NOT NULL COLLATE 'utf8mb4_0900_ai_ci',
+	`distro_name` TEXT NOT NULL COLLATE 'utf8mb4_0900_ai_ci',
+	`distro_release_major` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_0900_ai_ci',
+	PRIMARY KEY (`id`) USING BTREE,
+	INDEX `Index 1` (`id`, `distro_name`(100)) USING BTREE
+)
+COLLATE='utf8mb4_0900_ai_ci'
+ENGINE=InnoDB
+;
