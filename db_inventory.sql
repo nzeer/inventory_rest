@@ -14,11 +14,67 @@
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
--- Data exporting was unselected.
+
+-- Dumping database structure for inventory
+DROP DATABASE IF EXISTS `inventory`;
+CREATE DATABASE IF NOT EXISTS `inventory` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+USE `inventory`;
+
+-- Dumping structure for table inventory.distros
+DROP TABLE IF EXISTS `distros`;
+CREATE TABLE IF NOT EXISTS `distros` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `distro_info` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `distro_name` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `distro_release_major` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci,
+  PRIMARY KEY (`id`),
+  KEY `Index 1` (`id`,`distro_name`(100)) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Data exporting was unselected.
 
+-- Dumping structure for table inventory.facts
+DROP TABLE IF EXISTS `facts`;
+CREATE TABLE IF NOT EXISTS `facts` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `host_id` int NOT NULL,
+  `ip_address_id` int DEFAULT NULL,
+  `distro_info_id` int NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `FK__hosts` (`host_id`),
+  KEY `hosts` (`id`) USING BTREE,
+  KEY `FK_distros` (`distro_info_id`) USING BTREE,
+  KEY `FK_ip_address_id` (`ip_address_id`),
+  CONSTRAINT `FK__hosts` FOREIGN KEY (`host_id`) REFERENCES `hosts` (`id`),
+  CONSTRAINT `FK_facts_distros` FOREIGN KEY (`distro_info_id`) REFERENCES `distros` (`id`),
+  CONSTRAINT `FK_ipaddresses` FOREIGN KEY (`ip_address_id`) REFERENCES `ip_addresses` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 -- Data exporting was unselected.
+
+-- Dumping structure for table inventory.hosts
+DROP TABLE IF EXISTS `hosts`;
+CREATE TABLE IF NOT EXISTS `hosts` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `host_name` text NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `Index 1` (`id`,`host_name`(100)) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- Data exporting was unselected.
+
+-- Dumping structure for table inventory.ip_addresses
+DROP TABLE IF EXISTS `ip_addresses`;
+CREATE TABLE IF NOT EXISTS `ip_addresses` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `host_id` int DEFAULT NULL,
+  `ipv4` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `ipv6` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci,
+  `mac` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci,
+  PRIMARY KEY (`id`),
+  KEY `id` (`id`),
+  KEY `host_id` (`host_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Data exporting was unselected.
 
