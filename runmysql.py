@@ -1,7 +1,7 @@
 from libdata import DataLoader as dl
 
 # Define the MySQL database configuration
-config = {
+MYSQLDB_CONFIG = {
     'host': '172.16.30.30',
     'port': 3306,
     'user': 'root',
@@ -12,7 +12,7 @@ config = {
 def main():
     # Connect to the MySQL server
     mysql_connection = dl()
-    mysql_connection.set_mysql_config(config)
+    mysql_connection.set_mysql_config(MYSQLDB_CONFIG)
 
     try:
         for t in mysql_connection.get_mysql_tables():

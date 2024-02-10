@@ -5,7 +5,7 @@ import pymysql
 from dataclasses import dataclass
 from typing import Any
 
-DEBUG = True
+DEBUG = False
 
 def load_hosts_csv(file_hosts_csv):
     """
