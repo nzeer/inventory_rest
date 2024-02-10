@@ -193,7 +193,16 @@ class DataLoader:
         Args:
             table_name (str): The name of the table in the MySQL database.
             fields (dict): The fields of the table with their data types.
+        
         """
+        #Define the SQL for creating the table
+        #create_table_sql = """
+        #CREATE TABLE example_table6 (
+        #id INT PRIMARY KEY,
+        #name VARCHAR(100),
+        #age INT
+        #)""""
+        
         state = False
         # Connect to the MySQL server
         if self.get_mysql_config() is None:
@@ -313,6 +322,61 @@ class DataLoader:
         except Exception as e:
             if DEBUG:
                 print("ERROR: %s" % str(e))
+    
+    def get_mysql_table_description(self, table_name: str) -> dict:
+        """
+        Describes the given table in the MySQL database.
+
+        Args:
+            table_name (str): The name of the table in the MySQL database.
+
+        Returns:
+            dict: A dictionary containing the table description.
+        """
+        table_description = {}
+        # Connect to the MySQL server
+        if self.get_mysql_config() is None:
+            raise ValueError("MySQL configuration is missing")
+        try:
+            with pymysql.connect(**self.get_mysql_config()) as conn:
+                cursor = conn.cursor()
+
+                # Get the table description
+                cursor.execute(f"DESCRIBE {table_name}")
+                table_description = cursor.fetchall()
+        except Exception as e:
+            if DEBUG:
+                print("ERROR: %s" % str(e))
+        finally:
+            return table_description
+        
+    def get_mysql_field_description(self, table_name: str, field_name: str) -> dict:
+        """
+        Describes the given field in the MySQL database table.
+
+        Args:
+            table_name (str): The name of the table in the MySQL database.
+            field_name (str): The name of the field in the table.
+
+        Returns:
+            dict: A dictionary containing the field description.
+        """
+        field_description = {}
+        # Connect to the MySQL server
+        if self.get_mysql_config() is None:
+            raise ValueError("MySQL configuration is missing")
+        try:
+            with pymysql.connect(**self.get_mysql_config()) as conn:
+                cursor = conn.cursor()
+
+                # Get the field description
+                cursor.execute(f"DESCRIBE {table_name} {field_name}")
+                field_description = cursor.fetchall()
+        except Exception as e:
+            if DEBUG:
+                print("ERROR: %s" % str(e))
+        finally:
+            return field_description
         
     def get_mysql_tables(self) -> list:
         """

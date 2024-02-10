@@ -14,19 +14,13 @@ def main():
     mysql_connection = dl()
     mysql_connection.set_mysql_config(config)
 
-    # Define the SQL for creating the table
-    create_table_sql = """
-    CREATE TABLE example_table6 (
-        id INT PRIMARY KEY,
-        name VARCHAR(100),
-        age INT
-    )
-    """
-
     try:
         for t in mysql_connection.get_mysql_tables():
-            for c in mysql_connection.get_mysql_columns("t"):
-                print("(\ntable: %s)[field: %s\n]" % (t, c))
+            print("Table: %s\n" % t.format())
+            for c in mysql_connection.get_mysql_columns(t):
+                print("\t[field: %s\n]" % (c.format()))
+                #print("\n%s" % mysql_connection.get_mysql_data(t, c))
+                print("\t\tField description: ", mysql_connection.get_mysql_field_description(t.format(), c.format()))
     except Exception as e:
         print(str(e))
 
