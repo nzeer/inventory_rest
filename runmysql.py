@@ -1,5 +1,3 @@
-from numpy import true_divide
-import pymysql
 from libdata import DataLoader as dl
 
 # Define the MySQL database configuration

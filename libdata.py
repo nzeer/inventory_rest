@@ -1,6 +1,5 @@
 import csv
 import pandas as pd
-from pymongo import MongoClient
 import pymysql
 from dataclasses import dataclass
 from typing import Any
@@ -44,25 +43,25 @@ config = {
 
 @dataclass
 class DataLoader:
-    def __init__(self, *, mysql_config: dict = {}, csv_path: str = {}):
+    def __init__(self, *, mysql_config: dict = {}, csv_path: str = ""):
         if mysql_config:
             self.set_mysql_config(mysql_config)
         
         if csv_path:
-            self.csv_path = csv_path
+            self.set_csv_config_path(csv_path)
             
     def get_mysql_config(self) -> dict:
         return self.__dict__["_mysql_config"]
     
-    def set_mysql_config(self, value):
+    def set_mysql_config(self, value: dict = {}):
         self.__dict__["_mysql_config"] = dict(value)
         
-    #def __getattr__(self, name: str) -> Any:
-    #   return self.__dict__[f"_{name}"]
-
-    #def __setattr__(self, name, value):
-    #    self.__dict__[f"_{name}"] = dict(value)
-
+    def get_csv_config_path(self) -> str:
+        return self.__dict__["_csv_config_path"]
+    
+    def set_csv_path(self, value: str = ""):
+        self.__dict__["_csv_config_path"] = str(value)
+        
     def read_csv(self) -> pd.DataFrame:
         """
         Reads data from a CSV file and returns it as a pandas DataFrame.
@@ -72,7 +71,7 @@ class DataLoader:
         """
         data = None
         try:
-            data = pd.read_csv(self.csv_path)
+            data = pd.read_csv(self.get_csv_config_path())
         except Exception as e:
             raise e
         
@@ -87,7 +86,7 @@ class DataLoader:
         """
         state = False
         try:
-            data.to_csv(self.csv_path, index=False)
+            data.to_csv(self.get_csv_config_path(), index=False)
             state = True
         except Exception as e:
             raise e
@@ -134,10 +133,10 @@ class DataLoader:
         """
         # Read the CSV file into a pandas DataFrame
         data = None
-        if self.csv_path is None:
+        if self.get_csv_path() is None:
             raise ValueError("CSV configuration is missing")
         try:
-            data = pd.read_csv(self.csv_path)
+            data = pd.read_csv(self.get_csv_path())
             # Print the list of columns
             for column in data.columns:
                 print(column)
@@ -486,8 +485,6 @@ class DataLoader:
                 state = True
             except Exception as e:
                 raise e
-            #finally:
-             #   return state
             
     def execute_mysql_insert_query(self, mysql_config: dict, table_name: str, data: dict) -> bool:
         """
