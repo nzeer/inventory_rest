@@ -1,9 +1,11 @@
 import csv
+from numpy import bool_
 import pandas as pd
 import pymysql
 from dataclasses import dataclass
 from typing import Any
 
+DEBUG = True
 
 def load_hosts_csv(file_hosts_csv):
     """
@@ -38,9 +40,8 @@ config = {
     'password': 'p@s5w0rd',
     'db': 'testing'
 }
+
 """
-
-
 @dataclass
 class DataLoader:
     def __init__(self, *, mysql_config: dict = {}, csv_path: str = ""):
@@ -73,8 +74,8 @@ class DataLoader:
         try:
             data = pd.read_csv(self.get_csv_config_path())
         except Exception as e:
-            raise e
-        
+            if DEBUG:
+                print(str(e))
         return data
 
     def write_csv(self, data: pd.DataFrame) -> bool:
@@ -89,7 +90,8 @@ class DataLoader:
             data.to_csv(self.get_csv_config_path(), index=False)
             state = True
         except Exception as e:
-            raise e
+            if DEBUG:
+                print("ERROR: %s" % str(e))
         finally:
             return state
     
@@ -107,7 +109,8 @@ class DataLoader:
             self.write_mysql(data, table_name)
             state = True
         except Exception as e:
-            raise e
+            if DEBUG:
+                print("ERROR: %s" % str(e))
         finally:
             return state
         
@@ -123,7 +126,8 @@ class DataLoader:
             self.write_csv(data)
             state = True
         except Exception as e:
-            raise e
+            if DEBUG:
+                print("ERROR: %s" % str(e))
         finally:
             return state
         
@@ -141,7 +145,8 @@ class DataLoader:
             for column in data.columns:
                 print(column)
         except Exception as e:
-            raise e
+            if DEBUG:
+                print("ERROR: %s" % str(e))
 
     def read_mysql(self, query: str) -> pd.DataFrame:
         """
@@ -158,7 +163,8 @@ class DataLoader:
             with pymysql.connect(**self.get_mysql_config()) as conn:
                 data = pd.read_sql(query, conn)
         except Exception as e:
-            raise e
+            if DEBUG:
+                print("ERROR: %s" % str(e))
         return data
 
     def write_mysql(self, data: pd.DataFrame, table_name: str) -> bool:
@@ -175,7 +181,8 @@ class DataLoader:
                 data.to_sql(table_name, conn, if_exists='replace')
             state = True
         except Exception as e:
-            raise e
+            if DEBUG:
+                print("ERROR: %s" % str(e))
         finally:
             return state
 
@@ -202,7 +209,8 @@ class DataLoader:
                 cursor.execute(create_table_sql)
             state = True
         except Exception as e:
-            raise e
+            if DEBUG:
+                print("ERROR: %s" % str(e))
         finally:
             return state
         
@@ -227,7 +235,8 @@ class DataLoader:
                 cursor.execute(create_database_sql)
             state = True
         except Exception as e:
-            raise e
+            if DEBUG:
+                print("ERROR: %s" % str(e))
         finally:
             return state
             
@@ -253,7 +262,8 @@ class DataLoader:
                 cursor.execute(drop_table_sql)
             state = True
         except Exception as e:
-            raise e
+            if DEBUG:
+                print("ERROR: %s" % str(e))
         finally:
             return state
         
@@ -279,7 +289,8 @@ class DataLoader:
                 cursor.execute(drop_database_sql)
             state = True
         except Exception as e:
-            raise e
+            if DEBUG:
+                print("ERROR: %s" % str(e))
         finally:
             return state
         
@@ -300,7 +311,8 @@ class DataLoader:
                 for table in cursor.fetchall():
                     print(table[0])
         except Exception as e:
-            raise e
+            if DEBUG:
+                print("ERROR: %s" % str(e))
         
     def get_mysql_tables(self) -> list:
         """
@@ -320,7 +332,8 @@ class DataLoader:
                 for table in cursor.fetchall():
                     list_tables.append(table[0])
         except Exception as e:
-            raise e
+            if DEBUG:
+                print("ERROR: %s" % str(e))
         return list_tables
             
     def print_mysql_columns(self, table_name: str):
@@ -353,7 +366,8 @@ class DataLoader:
                 for column in cursor.fetchall():
                     print(column[0])
         except Exception as e:
-            raise e
+            if DEBUG:
+                print("ERROR: %s" % str(e))
         
     def get_mysql_columns(self, table_name: str) -> list:
         """
@@ -370,26 +384,17 @@ class DataLoader:
             with pymysql.connect(**self.get_mysql_config()) as conn:
                 cursor = conn.cursor()
         
-            
-                # Get the list of columns in the table
-                #cursor.execute(f"DESCRIBE {table_name}")
-                #columns = [column[0] for column in cursor.fetchall()]
-            
-                # Print the list of columns
-                #for column in columns:
-                #    print(column)
-
                 # Get the list of columns in the table
                 cursor.execute(f"SHOW COLUMNS FROM {table_name}")
 
                 # Print the list of columns
                 for column in cursor.fetchall():
                     list_columns.append(column[0])
-                #for column in cursor.fetchall():
-                #    print(column[0])
-                return list_columns
         except Exception as e:
-            raise e
+            if DEBUG:
+                print("ERROR: %s" % str(e))
+        finally:
+            return list_columns
 
     def generate_mysql_insert_query(table_name: str, data: dict):
         """
@@ -456,36 +461,38 @@ class DataLoader:
         return select_query
     
     def execute_mysql_query(self, query: str) -> bool:
-            """
-            Executes a MySQL query.
+        """
+        Executes a MySQL query.
 
-            Args:
-                query (str): The SQL query to be executed.
+        Args:
+            query (str): The SQL query to be executed.
 
-            Raises:
-                ValueError: If MySQL configuration is missing.
+        Raises:
+            ValueError: If MySQL configuration is missing.
 
-            Returns:
-                None
-            """
-            state = False
-            # Connect to the MySQL server
-            if self.get_mysql_config() is None:
-                raise ValueError("MySQL configuration is missing")
-            try:
-                with pymysql.connect(**self.get_mysql_config()) as conn:
-                    cursor = conn.cursor()
+        Returns:
+            None
+        """
+        bool_state = False
+        # Connect to the MySQL server
+        if self.get_mysql_config() is None:
+            raise ValueError("MySQL configuration is missing")
+        try:
+            with pymysql.connect(**self.get_mysql_config()) as conn:
+                cursor = conn.cursor()
 
-                    # Execute the SQL query
-                    cursor.execute(query)
+                # Execute the SQL query
+                cursor.execute(query)
 
-                    # Commit the changes
-                    conn.commit()
-                return True
-                state = True
-            except Exception as e:
-                raise e
-            
+                # Commit the changes
+                conn.commit()
+            bool_state = True
+        except Exception as e:
+            if DEBUG:
+                print("ERROR: %s" % str(e))
+        finally:
+            return bool_state
+
     def execute_mysql_insert_query(self, mysql_config: dict, table_name: str, data: dict) -> bool:
         """
         Executes a MySQL insert query to insert data into a specified table.
@@ -498,15 +505,16 @@ class DataLoader:
         Returns:
             None
         """
-        state = False
+        bool_state = False
         # Generate the SQL for inserting the data into the table
         insert_query = self.generate_mysql_insert_query(table_name, data)
 
         # Execute the SQL query
         try:
             if self.execute_mysql_query(mysql_config, insert_query):
-                state = True
+                bool_state = True
         except Exception as e:
-            raise e
+            if DEBUG:
+                print("ERROR: %s" % str(e))
         finally:
-            return state
+            return bool_state

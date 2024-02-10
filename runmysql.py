@@ -25,10 +25,10 @@ def main():
 
     try:
         for t in mysql_connection.get_mysql_tables():
-            for c in mysql_connection.get_mysql_columns(t):
+            for c in mysql_connection.get_mysql_columns("t"):
                 print("(\ntable: %s)[field: %s\n]" % (t, c))
     except Exception as e:
-        print(e)
+        print(str(e))
 
 # Check if the script is run as the main module
 if __name__ == "__main__":
