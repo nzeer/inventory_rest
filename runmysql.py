@@ -8,45 +8,55 @@ config = {
     'port': 3306,
     'user': 'root',
     'password': 'ANSKk08aPEDbFjDO',
-    'db': 'testing'
+    'db': 'inventory'
 }
-#data_loader = DataLoader()
-#print(config)
-mysql_connection = dl()
-dl.mysql_config = config
-# Connect to the MySQL server
-#conn = pymysql.connect(**config)
-#cursor = conn.cursor()
 
-# Define the SQL for creating the table
-create_table_sql = """
-CREATE TABLE example_table6 (
-    id INT PRIMARY KEY,
-    name VARCHAR(100),
-    age INT
-)
-"""
+def main():
+    # Connect to the MySQL server
+    mysql_connection = dl()
+    mysql_connection.set_mysql_config(config)
 
-try:
-    if mysql_connection.execute_mysql_query(create_table_sql):
-        print("Table created successfully")
-except Exception as e:
-    print(e)
+    # Define the SQL for creating the table
+    create_table_sql = """
+    CREATE TABLE example_table6 (
+        id INT PRIMARY KEY,
+        name VARCHAR(100),
+        age INT
+    )
+    """
 
-mysql_connection.show_mysql_tables()
-# Execute the SQL to create the table
-#cursor.execute(create_table_sql)
+    try:
+        #if mysql_connection.execute_mysql_query(create_table_sql):
+        #    print("Table created successfully")
+        pass
+    except Exception as e:
+        print(e)
 
-# Define the SQL for listing all tables in the database
-#show_tables_sql = "SHOW TABLES"
+    #mysql_connection.show_mysql_tables()
 
-# Execute the SQL to list all tables
-#cursor.execute(show_tables_sql)
+    for t in mysql_connection.get_mysql_tables():
+        for c in mysql_connection.get_mysql_columns(t):
+            print("(\ntable: %s)[field: %s\n]" % (t, c))
+        
+        #print(mysql_connection.print_mysql_columns(t))
+    # Execute the SQL to create the table
+    #cursor.execute(create_table_sql)
 
-# Fetch and print all tables
-#tables = cursor.fetchall()
-#for table in tables:
-#    print(table)
+    # Define the SQL for listing all tables in the database
+    #show_tables_sql = "SHOW TABLES"
 
-# Close the connection
-#conn.close()
+    # Execute the SQL to list all tables
+    #cursor.execute(show_tables_sql)
+
+    # Fetch and print all tables
+    #tables = cursor.fetchall()
+    #for table in tables:
+    #    print(table)
+
+    # Close the connection
+    #conn.close()
+
+# Check if the script is run as the main module
+if __name__ == "__main__":
+    # Call the main function
+    main()

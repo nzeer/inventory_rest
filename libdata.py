@@ -46,19 +46,22 @@ config = {
 class DataLoader:
     def __init__(self, *, mysql_config: dict = {}, csv_path: str = {}):
         if mysql_config:
-            self.mysql_config = mysql_config
+            self.set_mysql_config(mysql_config)
         
         if csv_path:
             self.csv_path = csv_path
             
-    def __call__(self, base):
-        return self
+    def get_mysql_config(self) -> dict:
+        return self.__dict__["_mysql_config"]
+    
+    def set_mysql_config(self, value):
+        self.__dict__["_mysql_config"] = dict(value)
         
-    def __getattr__(self, name: str) -> Any:
-        return self.__dict__[f"_{name}"]
+    #def __getattr__(self, name: str) -> Any:
+    #   return self.__dict__[f"_{name}"]
 
-    def __setattr__(self, name, value):
-        self.__dict__[f"_{name}"] = dict(value)
+    #def __setattr__(self, name, value):
+    #    self.__dict__[f"_{name}"] = dict(value)
 
     def read_csv(self) -> pd.DataFrame:
         """
@@ -153,7 +156,7 @@ class DataLoader:
         """
         data = None
         try:
-            with pymysql.connect(**self.mysql_config) as conn:
+            with pymysql.connect(**self.get_mysql_config()) as conn:
                 data = pd.read_sql(query, conn)
         except Exception as e:
             raise e
@@ -169,7 +172,7 @@ class DataLoader:
         """
         state = False
         try:
-            with pymysql.connect(**self.mysql_config) as conn:
+            with pymysql.connect(**self.get_mysql_config()) as conn:
                 data.to_sql(table_name, conn, if_exists='replace')
             state = True
         except Exception as e:
@@ -187,10 +190,10 @@ class DataLoader:
         """
         state = False
         # Connect to the MySQL server
-        if self.mysql_config is None:
+        if self.get_mysql_config() is None:
             raise ValueError("MySQL configuration is missing")
         try:
-            with pymysql.connect(**self.mysql_config) as conn:
+            with pymysql.connect(**self.get_mysql_config()) as conn:
                 cursor = conn.cursor()
             
                 # Generate the SQL for creating the table
@@ -213,10 +216,10 @@ class DataLoader:
         """
         state = False
         # Connect to the MySQL server
-        if self.mysql_config is None:
+        if self.get_mysql_config() is None:
             raise ValueError("MySQL configuration is missing")
         try:
-            with pymysql.connect(**self.mysql_config) as conn:
+            with pymysql.connect(**self.get_mysql_config()) as conn:
                 cursor = conn.cursor()
 
                 # Generate the SQL for creating the database
@@ -238,10 +241,10 @@ class DataLoader:
         """
         state = False
         # Connect to the MySQL server
-        if self.mysql_config is None:
+        if self.get_mysql_config() is None:
             raise ValueError("MySQL configuration is missing")
         try:
-            with pymysql.connect(**self.mysql_config) as conn:
+            with pymysql.connect(**self.get_mysql_config()) as conn:
                 cursor = conn.cursor()
 
                 # Generate the SQL for dropping the table
@@ -264,10 +267,10 @@ class DataLoader:
         """
         state = False
         # Connect to the MySQL server
-        if self.mysql_config is None:
+        if self.get_mysql_config() is None:
             raise ValueError("MySQL configuration is missing")
         try:
-            with pymysql.connect(**self.mysql_config) as conn:
+            with pymysql.connect(**self.get_mysql_config()) as conn:
                 cursor = conn.cursor()
 
                 # Generate the SQL for dropping the database
@@ -286,10 +289,10 @@ class DataLoader:
         Prints the list of tables in the MySQL database.
         """
         # Connect to the MySQL server
-        if self.mysql_config is None:
+        if self.get_mysql_config() is None:
             raise ValueError("MySQL configuration is missing")
         try:
-            with pymysql.connect(**self.mysql_config) as conn:
+            with pymysql.connect(**self.get_mysql_config()) as conn:
                 cursor = conn.cursor()
 
                 # Get the list of tables in the database
@@ -299,6 +302,27 @@ class DataLoader:
                     print(table[0])
         except Exception as e:
             raise e
+        
+    def get_mysql_tables(self) -> list:
+        """
+        Prints the list of tables in the MySQL database.
+        """
+        list_tables = []
+        # Connect to the MySQL server
+        if self.get_mysql_config() is None:
+            raise ValueError("MySQL configuration is missing")
+        try:
+            with pymysql.connect(**self.get_mysql_config()) as conn:
+                cursor = conn.cursor()
+
+                # Get the list of tables in the database
+                cursor.execute("SHOW TABLES")
+                # Print the list of tables
+                for table in cursor.fetchall():
+                    list_tables.append(table[0])
+        except Exception as e:
+            raise e
+        return list_tables
             
     def print_mysql_columns(self, table_name: str):
         """
@@ -308,10 +332,10 @@ class DataLoader:
             table_name (str): The name of the table in the MySQL database.
         """
         # Connect to the MySQL server
-        if self.mysql_config is None:
+        if self.get_mysql_config() is None:
             raise ValueError("MySQL configuration is missing")
         try:
-            with pymysql.connect(**self.mysql_config) as conn:
+            with pymysql.connect(**self.get_mysql_config()) as conn:
                 cursor = conn.cursor()
         
             
@@ -329,6 +353,42 @@ class DataLoader:
                 # Print the list of columns
                 for column in cursor.fetchall():
                     print(column[0])
+        except Exception as e:
+            raise e
+        
+    def get_mysql_columns(self, table_name: str) -> list:
+        """
+        Prints the list of columns in the MySQL database table.
+
+        Args:
+            table_name (str): The name of the table in the MySQL database.
+        """
+        list_columns = []
+        # Connect to the MySQL server
+        if self.get_mysql_config() is None:
+            raise ValueError("MySQL configuration is missing")
+        try:
+            with pymysql.connect(**self.get_mysql_config()) as conn:
+                cursor = conn.cursor()
+        
+            
+                # Get the list of columns in the table
+                #cursor.execute(f"DESCRIBE {table_name}")
+                #columns = [column[0] for column in cursor.fetchall()]
+            
+                # Print the list of columns
+                #for column in columns:
+                #    print(column)
+
+                # Get the list of columns in the table
+                cursor.execute(f"SHOW COLUMNS FROM {table_name}")
+
+                # Print the list of columns
+                for column in cursor.fetchall():
+                    list_columns.append(column[0])
+                #for column in cursor.fetchall():
+                #    print(column[0])
+                return list_columns
         except Exception as e:
             raise e
 
@@ -411,10 +471,10 @@ class DataLoader:
             """
             state = False
             # Connect to the MySQL server
-            if self.mysql_config is None:
+            if self.get_mysql_config() is None:
                 raise ValueError("MySQL configuration is missing")
             try:
-                with pymysql.connect(**self.mysql_config) as conn:
+                with pymysql.connect(**self.get_mysql_config()) as conn:
                     cursor = conn.cursor()
 
                     # Execute the SQL query
