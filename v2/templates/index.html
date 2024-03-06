@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Ansible Inventory Viewer</title>
+  </head>
+  <body>
+    <h1>Ansible Inventory</h1>
+    {% for group, details in inventory.items() %}
+    <h2>{{ group }}</h2>
+    {% if details is mapping %} {% for subsection, hosts in details.items() %}
+    <h3>{{ subsection }}</h3>
+    <ul>
+      {% for host in hosts %}
+      <li>{{ host }}</li>
+      {% endfor %}
+    </ul>
+    {% endfor %} {% else %}
+    <ul>
+      {% for host in details %}
+      <li>{{ host }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %} {% endfor %}
+  </body>
+</html>
